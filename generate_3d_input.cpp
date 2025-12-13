@@ -6,16 +6,31 @@
 
 int main(int argc, char** argv)
 {
-    if (argc != 5) {
-        std::cout << "Usage: " << argv[0] << " <nx> <ny> <nz> <output_file>" << std::endl;
-        std::cout << "Example: " << argv[0] << " 100 100 100 sphere_3d.dat" << std::endl;
+    if (argc < 2 || argc > 5) {
+        std::cout << "Usage: " << argv[0] << " <output_file> [nx] [ny] [nz]" << std::endl;
+        std::cout << "Examples:" << std::endl;
+        std::cout << "  " << argv[0] << " sphere.dat              # Uses default 100x100x100" << std::endl;
+        std::cout << "  " << argv[0] << " sphere.dat 200          # Creates 200x200x200" << std::endl;
+        std::cout << "  " << argv[0] << " sphere.dat 200 150 100  # Creates 200x150x100" << std::endl;
         return 1;
     }
 
-    int nx = std::atoi(argv[1]);
-    int ny = std::atoi(argv[2]);
-    int nz = std::atoi(argv[3]);
-    std::string filename = argv[4];
+    std::string filename = argv[1];
+
+    // Default or user-specified dimensions
+    int nx = 100;
+    int ny = 100;
+    int nz = 100;
+
+    if (argc >= 3) nx = std::atoi(argv[2]);
+    if (argc >= 4) ny = std::atoi(argv[3]);
+    if (argc >= 5) nz = std::atoi(argv[4]);
+
+    // If only one dimension given, make it cubic
+    if (argc == 3) {
+        ny = nx;
+        nz = nx;
+    }
 
     std::ofstream file(filename);
     if (!file.is_open()) {

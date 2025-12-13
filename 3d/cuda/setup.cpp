@@ -16,9 +16,9 @@ void initialize(int argc, char *argv[], Field& current,
     /*
      * Following combinations of command line arguments are possible:
      * No arguments:    use default field dimensions and number of time steps
-     * One argument:    read initial field from a given file
-     * Two arguments:   initial field from file and number of time steps
-     * Three arguments: field dimensions (rows,cols) and number of time steps
+     * One argument:    read initial field from a 3D input file
+     * Two arguments:   initial field from 3D file and number of time steps
+     * Four arguments:  field dimensions (nx, ny, nz) and number of time steps
      */
 
 

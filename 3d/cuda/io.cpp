@@ -85,55 +85,45 @@ void write_vtk(Field& field, const int iter)
     std::cout << "Wrote VTK file: " << filename << std::endl;
 }
 
-// Read the initial temperature distribution from a file
+// Read the initial temperature distribution from a 3D file
 void read_field(Field& field, std::string filename)
 {
     std::ifstream file;
     file.open(filename);
-    // Read the header
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open input file " << filename << std::endl;
+        exit(1);
+    }
+
+    // Read the header: # nx ny nz
     std::string line, comment;
     std::getline(file, line);
 
-    // Parse header - can be either "# nx ny" (2D) or "# nx ny nz" (3D)
     std::stringstream ss(line);
     ss >> comment;  // Read the '#'
 
     int nx_full, ny_full, nz_full;
-    ss >> nx_full >> ny_full;
-
-    // Check if there's a third dimension
-    bool is_3d = false;
-    if (ss >> nz_full) {
-        is_3d = true;
-        std::cout << "Reading 3D input file: " << nx_full << " x " << ny_full << " x " << nz_full << std::endl;
-    } else {
-        nz_full = ny_full;  // Use ny for nz in 2D case
-        std::cout << "Reading 2D input file: " << nx_full << " x " << ny_full << " (replicating in z)" << std::endl;
+    if (!(ss >> nx_full >> ny_full >> nz_full)) {
+        std::cerr << "Error: Invalid file format. Expected header: # nx ny nz" << std::endl;
+        std::cerr << "Got: " << line << std::endl;
+        exit(1);
     }
+
+    std::cout << "Reading 3D input file: " << nx_full << " x " << ny_full << " x " << nz_full << std::endl;
 
     field.setup(nx_full, ny_full, nz_full);
 
-    if (is_3d) {
-        // Read 3D data directly
-        for (int i = 0; i < nx_full; i++) {
-            for (int j = 0; j < ny_full; j++) {
-                for (int k = 0; k < nz_full; k++) {
-                    double value;
-                    file >> value;
-                    field(i + 1, j + 1, k + 1) = value;
-                }
-            }
-        }
-    } else {
-        // Read 2D data and replicate it for all z-slices
-        for (int i = 0; i < nx_full; i++) {
-            for (int j = 0; j < ny_full; j++) {
+    // Read 3D data
+    for (int i = 0; i < nx_full; i++) {
+        for (int j = 0; j < ny_full; j++) {
+            for (int k = 0; k < nz_full; k++) {
                 double value;
-                file >> value;
-                // Copy this value to all z-slices
-                for (int k = 0; k < nz_full; k++) {
-                    field(i + 1, j + 1, k + 1) = value;
+                if (!(file >> value)) {
+                    std::cerr << "Error: Unexpected end of file at position ("
+                              << i << "," << j << "," << k << ")" << std::endl;
+                    exit(1);
                 }
+                field(i + 1, j + 1, k + 1) = value;
             }
         }
     }
