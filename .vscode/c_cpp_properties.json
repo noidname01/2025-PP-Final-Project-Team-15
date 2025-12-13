@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/ohpc/Taiwania3/pkg/intel/2024/oneapi/tbb/2021.11/include",
+                "/opt/ohpc/Taiwania3/Intel/lib/gcc-13.2.0/openmpi-4.1.6/include",
+                "/work/HPC_SYS/twnia2/pkg-rocky8/nvidia/cuda/cuda-12.8/include",
+                "/work/HPC_SYS/twnia2/pkg-rocky8/nvidia/cuda/cuda-12.8/nccl/include",
+                "/work/HPC_SYS/twnia2/pkg-rocky8/nvidia/cuda/cuda-12.8/cudnn/include"
+            ],
+            "defines": [
+                "__CUDACC__"
+            ],
+            "compilerPath": "/work/HPC_SYS/twnia2/pkg-rocky8/nvidia/cuda/cuda-12.8/bin/nvcc",
+            "compilerArgs": [
+                "-arch=sm_70"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

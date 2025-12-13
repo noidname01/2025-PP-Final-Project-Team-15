@@ -1,15 +1,10 @@
 #pragma once
 #include "heat.hpp"
-#include "parallel.hpp"
 #include <cuda_runtime_api.h>
 
 // Function declarations
 void initialize(int argc, char *argv[], Field& current,
-                Field& previous, int& nsteps, ParallelData& parallel);
-
-void exchange_init(Field& field, ParallelData& parallel);
-
-void exchange_finalize(Field& field, ParallelData& parallel);
+                Field& previous, int& nsteps);
 
 void evolve(Field& curr, Field& prev, const double a, const double dt);
 
@@ -17,10 +12,11 @@ void evolve_interior(Field& curr, Field& prev, const double a, const double dt, 
 
 void evolve_edges(Field& curr, Field& prev, const double a, const double dt, cudaStream_t *streams);
 
-void write_field(Field& field, const int iter, const ParallelData& parallel);
+void write_field(Field& field, const int iter);
 
-void read_field(Field& field, std::string filename,
-                ParallelData& parallel);
+void write_vtk(Field& field, const int iter);
+
+void read_field(Field& field, std::string filename);
 
 double average(const Field& field);
 

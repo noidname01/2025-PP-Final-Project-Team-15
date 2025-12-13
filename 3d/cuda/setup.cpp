@@ -5,13 +5,13 @@
 #include <string>
 #include <cstdlib>
 #include <iostream>
-#include "parallel.hpp"
+#include <cuda_runtime.h>
 #include "heat.hpp"
 #include "functions.hpp"
 
 
 void initialize(int argc, char *argv[], Field& current,
-                Field& previous, int& nsteps, ParallelData& parallel)
+                Field& previous, int& nsteps)
 {
     /*
      * Following combinations of command line arguments are possible:
@@ -63,36 +63,21 @@ void initialize(int argc, char *argv[], Field& current,
     }
 
     if (read_file) {
-        if (0 == parallel.rank)
-            std::cout << "Reading input from " + input_file << std::endl;
-        read_field(current, input_file, parallel);
+        std::cout << "Reading input from " + input_file << std::endl;
+        read_field(current, input_file);
     } else {
-        current.setup(height, width, length, parallel);
-        current.generate(parallel);
+        current.setup(height, width, length);
+        current.generate();
     }
 
     // copy "current" field also to "previous"
     previous = current;
 
-    if (0 == parallel.rank) {
-        std::cout << "Simulation parameters: " 
-                  << "height: " << height << " width: " << width << " length: " << length
-                  << " time steps: " << nsteps << std::endl;
-        std::cout << "Number of MPI tasks: " << parallel.size 
-                  << " (" << parallel.dims[0] << " x " << parallel.dims[1] << " x " 
-                  << parallel.dims[2] << ")" << std::endl;
-        std::cout << "Number of GPUs per node: " << parallel.dev_count << std::endl;
-       #ifndef NO_MPI
-        #if defined MPI_DATATYPES && MPI_NEIGHBORHOOD
-        std::cout << "Both MPI_DATATYPES and MPI_NEIGHBORHOOD defined; "
-                  << "using isend/irecv with datatypes in communication" << std::endl;
-        #elif defined MPI_DATATYPES
-        std::cout << "Using isend/irecv with datatypes in communication" << std::endl;
-        #elif defined MPI_NEIGHBORHOOD
-        std::cout << "Using neighborhood collective in communication" << std::endl;
-        #else
-        std::cout << "Using manual packing of send/recv buffers" << std::endl;
-        #endif
-        #endif
-    }
+    std::cout << "Simulation parameters: "
+              << "height: " << height << " width: " << width << " length: " << length
+              << " time steps: " << nsteps << std::endl;
+
+    int dev_count;
+    cudaGetDeviceCount(&dev_count);
+    std::cout << "Number of GPUs: " << dev_count << std::endl;
 }

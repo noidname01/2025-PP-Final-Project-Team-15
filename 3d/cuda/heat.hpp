@@ -1,9 +1,6 @@
 #pragma once
 #include "matrix.hpp"
 
-// Forward declaration
-struct ParallelData;
-
 // Class for temperature field
 struct Field {
     // nx and ny are the true dimensions of the field. The temperature matrix
@@ -24,9 +21,9 @@ struct Field {
     double *temperature_dev = NULL;
 #endif
 
-    void setup(int nx_in, int ny_in, int nz_in, ParallelData& parallel);
+    void setup(int nx_in, int ny_in, int nz_in);
 
-    void generate(const ParallelData& parallel);
+    void generate();
 
     // standard (i,j) syntax for setting elements
     double& operator()(int i, int j, int k) {return temperature(i, j, k);}

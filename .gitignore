@@ -39,3 +39,7 @@
 
 # debug information files
 *.dwo
+
+heat_cuda
+*.png
+*.vtk
