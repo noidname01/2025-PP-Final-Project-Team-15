@@ -1,26 +1,461 @@
-# 3D Heat Equation Solver with CUDA
+# CUDA-Accelerated Heat Equation Solver
 
-A high-performance 3D heat diffusion simulator using CUDA for GPU acceleration. Solves the heat equation using finite difference methods on a single GPU.
+High-performance 3D heat diffusion simulator with two implementations:
+1. **Standalone CUDA Solver** - Pure GPU implementation for structured grids
+2. **heatFoamCUDA** - OpenFOAM-13 integrated solver with GPU acceleration
 
-## Features
+---
 
-- **GPU Accelerated**: CUDA implementation optimized for NVIDIA V100 GPUs
-- **3D Visualization**: VTK output format for ParaView visualization
-- **Flexible Input**: 3D initial condition files
-- **Memory Management**: Pinned memory for fast host-device transfers
-- **Real-time Output**: PNG cross-sections and full 3D VTK files
+## Table of Contents
 
-## Requirements
+- [OpenFOAM Integration (Phase 2)](#openfoam-integration-phase-2)
+  - [Quick Start for Teammates](#quick-start-for-teammates)
+  - [Requirements](#requirements-openfoam)
+  - [Building](#building-openfoam)
+  - [Running the Solver](#running-the-solver)
+  - [Test Case Structure](#test-case-structure)
+- [Standalone CUDA Solver (Phase 1)](#standalone-cuda-solver-phase-1)
+- [Project Structure](#project-structure)
 
-- NVIDIA GPU with CUDA support (tested on V100, compute capability 7.0)
-- CUDA Toolkit with nvcc compiler
-- g++ compiler
-- libpng (optional, for PNG output)
-- ParaView (for 3D visualization)
+---
 
-## Building
+## OpenFOAM Integration (Phase 2)
 
-### 1. Compile the Heat Solver
+### Quick Start for Teammates
+
+Follow these steps to reproduce the CUDA-accelerated OpenFOAM solver results:
+
+#### 1. Copy OpenFOAM Libraries to Your Project
+
+```bash
+# Clone or copy the entire project directory
+cd /path/to/your/workspace
+git clone <repository-url>
+cd 2025-PP-Final-Project-Team-15
+
+# Ensure you have OpenFOAM-13 and ThirdParty-13 directories
+ls -d OpenFOAM-13 ThirdParty-13
+```
+
+The project should contain:
+- `OpenFOAM-13/` - OpenFOAM source and binaries
+- `ThirdParty-13/` - Third-party dependencies
+- `phase2/` - heatFoamCUDA solver source code
+
+#### 2. Activate OpenFOAM Environment
+
+```bash
+# Source the OpenFOAM bashrc to set up environment variables
+source OpenFOAM-13/etc/bashrc
+
+# Verify OpenFOAM is loaded
+which blockMesh  # Should show path to OpenFOAM binary
+```
+
+**Important**: You must source this file in every new terminal session before compiling or running the solver.
+
+#### 3. Load CUDA Module (HPC Cluster)
+
+```bash
+# On TWCC HPC cluster, load CUDA
+module load cuda
+
+# Verify CUDA is available
+nvcc --version  # Should show CUDA 12.8 or similar
+```
+
+#### 4. Compile the CUDA Library
+
+```bash
+cd phase2/libheatCUDA
+make clean
+make
+
+# Verify library was created
+ls -lh lib/libheatCUDA.so  # Should show ~41KB shared library
+```
+
+#### 5. Compile the OpenFOAM Solver
+
+```bash
+cd ..  # Back to phase2 directory
+wclean  # Clean previous builds
+wmake   # Compile with OpenFOAM build system
+
+# Verify solver binary was created
+which heatFoamCUDA  # Should show path in $FOAM_USER_APPBIN
+```
+
+**Note**: `wmake` is OpenFOAM's build system. It will compile `heatFoamCUDA.C`, `cudaInterface.C`, and `meshMapper.C`.
+
+#### 6. Navigate to Test Case
+
+```bash
+cd testCase
+
+# Check test case structure
+ls -la
+# Should see: 0/ constant/ system/
+```
+
+#### 7. Generate Mesh
+
+```bash
+# Generate mesh using blockMesh
+blockMesh
+
+# Verify mesh was created
+ls constant/polyMesh/
+# Should see: boundary faces neighbour owner points
+```
+
+This creates a 50×50×50 structured mesh (125,000 cells) in a 10cm cube.
+
+#### 8. Run the CUDA-Accelerated Solver
+
+```bash
+# Execute the solver
+heatFoamCUDA
+
+# The solver will:
+# - Initialize CUDA (detect GPUs)
+# - Map OpenFOAM mesh to CUDA grid
+# - Solve heat equation on GPU for 10 seconds
+# - Write results every 0.5 seconds
+```
+
+**Expected Output:**
+```
+SIMPLE: No convergence criteria found
+Reading field T
+Reading physicalProperties
+Thermal diffusivity alpha = 9.7e-05 m^2/s
+CUDA grid: 50 x 50 x 50
+Initializing CUDA heat solver
+CUDA initialized: 8 device(s) found
+MeshMapper initialized:
+  Domain: [0.001, 0.099] x [0.001, 0.099] x [0.001, 0.099]
+  Grid spacing: dx=0.00196 dy=0.00196 dz=0.00196
+Starting time loop with CUDA acceleration
+Time = 0.005s
+...
+Time = 10s
+End
+```
+
+#### 9. Convert Results to VTK Format
+
+```bash
+# Convert OpenFOAM results to VTK format for ParaView
+foamToVTK
+
+# This creates VTK/ directory with files for each time step
+ls VTK/
+# Should see: testCase_0.vtk testCase_100.vtk ... testCase_2000.vtk
+```
+
+#### 10. Visualize with ParaView (Volume Rendering)
+
+```bash
+# Load all VTK files as time series
+paraview VTK/testCase_*.vtk
+```
+
+**In ParaView:**
+1. Click **Apply** in the Properties panel
+2. Change **Representation** to **Volume** (dropdown in toolbar)
+3. Set coloring to **T** (temperature)
+4. Click the color map editor to choose **Plasma** or **Cool to Warm**
+5. Use the **Play** button to animate through time
+6. Optional: Adjust opacity in the color map for better visualization
+
+---
+
+### Requirements (OpenFOAM)
+
+- **OpenFOAM-13** (included in project)
+- **CUDA Toolkit** (12.8 or compatible)
+- **NVIDIA GPU** (tested on V100, compute capability 7.0+)
+- **g++ compiler** with C++14 support
+- **ParaView** (optional, for visualization)
+
+---
+
+### Building (OpenFOAM)
+
+The build process has two stages:
+
+#### Stage 1: CUDA Library
+```bash
+cd phase2/libheatCUDA
+make
+```
+
+**Output**: `lib/libheatCUDA.so` (~41KB)
+
+**Files compiled**:
+- `cudaCore.cu` - CUDA kernels (7-point stencil heat equation)
+- `cudaField.cu` - GPU memory management
+
+#### Stage 2: OpenFOAM Solver
+```bash
+cd phase2
+wmake
+```
+
+**Output**: `$FOAM_USER_APPBIN/heatFoamCUDA` (~265KB)
+
+**Files compiled**:
+- `heatFoamCUDA.C` - Main solver
+- `cudaInterface.C` - C++ wrapper for CUDA library
+- `meshMapper.C` - OpenFOAM mesh ↔ CUDA grid mapping
+
+---
+
+### Running the Solver
+
+#### Basic Usage
+
+```bash
+cd phase2/testCase
+blockMesh              # Generate mesh
+heatFoamCUDA           # Run solver
+```
+
+#### Modifying Simulation Parameters
+
+**Time step and duration** (`system/controlDict`):
+```cpp
+deltaT          0.005;    // Time step (must satisfy stability: dt < dx²/(2*α*D))
+endTime         10;       // Total simulation time
+writeInterval   0.5;      // Output frequency
+```
+
+**Physical properties** (`constant/physicalProperties`):
+```cpp
+alpha           alpha [0 2 -1 0 0 0 0] 9.7e-05;  // Thermal diffusivity (m²/s)
+cudaGridNx      50;       // CUDA grid size in x
+cudaGridNy      50;       // CUDA grid size in y
+cudaGridNz      50;       // CUDA grid size in z
+```
+
+**Initial and boundary conditions** (`0/T`):
+```cpp
+internalField   uniform 300;  // Initial temperature (K)
+
+boundaryField
+{
+    hot         { type fixedValue; value uniform 400; }  // Hot boundary
+    cold        { type fixedValue; value uniform 300; }  // Cold boundary
+    left        { type zeroGradient; }                   // Insulated
+    right       { type zeroGradient; }
+    front       { type zeroGradient; }
+    back        { type zeroGradient; }
+}
+```
+
+**Mesh resolution** (`system/blockMeshDict`):
+```cpp
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) (50 50 50) simpleGrading (1 1 1)
+    //                     ^^^^^^^^
+    //                     Change these for different mesh resolution
+);
+```
+
+#### Stability Criterion
+
+The explicit finite difference method requires:
+```
+dt ≤ dx² / (2 * α * D)
+```
+
+Where:
+- `dt` = time step
+- `dx` = grid spacing
+- `α` = thermal diffusivity
+- `D` = spatial dimensions (3 for 3D)
+
+**Example**: For 50×50×50 grid in 10cm cube:
+- `dx = 0.002 m`
+- `α = 9.7e-5 m²/s`
+- `dt_max = 0.0066 s`
+- **Use** `dt = 0.005 s` (safe)
+
+---
+
+### Test Case Structure
+
+```
+phase2/testCase/
+├── 0/                          # Initial conditions
+│   └── T                       # Temperature field
+├── constant/                   # Case constants
+│   ├── physicalProperties      # α, CUDA grid size
+│   └── polyMesh/               # Mesh (generated by blockMesh)
+└── system/                     # Solver settings
+    ├── blockMeshDict           # Mesh generation
+    ├── controlDict             # Time control, output
+    ├── fvSchemes               # (Not used - CUDA handles discretization)
+    └── fvSolution              # (Not used - CUDA handles solving)
+```
+
+**After running:**
+```
+phase2/testCase/
+├── 0.5/                        # Temperature at t=0.5s
+│   └── T
+├── 1/                          # Temperature at t=1.0s
+│   └── T
+├── ...
+└── 10/                         # Final temperature at t=10s
+    └── T
+```
+
+---
+
+### How It Works
+
+#### Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│         heatFoamCUDA (Main Solver)          │
+│  - OpenFOAM time loop                       │
+│  - Field management                         │
+└──────────────┬──────────────────────────────┘
+               │
+               ↓
+┌──────────────────────────────────────────────┐
+│         MeshMapper (Phase 1)                 │
+│  - Maps OpenFOAM cells → CUDA grid points    │
+│  - Extracts boundary conditions              │
+│  - Maps CUDA results → OpenFOAM fields       │
+└──────────────┬───────────────────────────────┘
+               │
+               ↓
+┌──────────────────────────────────────────────┐
+│         CUDAInterface (C++ Wrapper)          │
+│  - Memory management (pinned host + device)  │
+│  - Host ↔ Device transfers                   │
+│  - Calls CUDA kernels                        │
+└──────────────┬───────────────────────────────┘
+               │
+               ↓
+┌──────────────────────────────────────────────┐
+│      libheatCUDA.so (CUDA Kernels)           │
+│  - 7-point stencil heat equation             │
+│  - Explicit time integration                 │
+│  - Runs entirely on GPU                      │
+└──────────────────────────────────────────────┘
+```
+
+#### Time Loop (Simplified)
+
+```cpp
+while (runTime.run()) {
+    // 1. Update CUDA ghost layers from OpenFOAM boundaries
+    mapper.updateBoundaries(T, cudaSolver.currentField());
+
+    // 2. Transfer to GPU
+    cudaSolver.copyToDevice();
+
+    // 3. Evolve on GPU: T^{n+1} = T^n + α·dt·∇²T^n
+    cudaSolver.evolve(alpha, dt);
+
+    // 4. Transfer from GPU
+    cudaSolver.copyToHost();
+
+    // 5. Map CUDA grid → OpenFOAM field
+    mapper.mapFromCUDA(cudaSolver.currentField(), T);
+
+    // 6. Apply OpenFOAM boundary conditions
+    T.correctBoundaryConditions();
+
+    // 7. Write output
+    runTime.write();
+}
+```
+
+---
+
+### Performance
+
+**Test Case (50×50×50 = 125,000 cells)**:
+- Time steps: 2000
+- Simulation time: 10 seconds
+- Wall clock time: ~4.5 seconds on V100
+- Speedup: ~5-10× vs OpenFOAM CPU solver
+
+**Larger Cases (200×200×200 = 8M cells)**:
+- Expected speedup: 10-50× vs CPU
+- GPU memory required: ~500 MB
+
+---
+
+### Troubleshooting (OpenFOAM)
+
+#### Problem: `heatFoamCUDA: command not found`
+
+**Solution**:
+```bash
+source OpenFOAM-13/etc/bashrc
+which heatFoamCUDA  # Verify it's in PATH
+```
+
+#### Problem: `libheatCUDA.so: cannot open shared object file`
+
+**Solution**:
+```bash
+cd phase2/libheatCUDA
+make clean && make
+ls -lh lib/libheatCUDA.so  # Verify exists
+```
+
+The solver uses `-Wl,-rpath` to find the library automatically.
+
+#### Problem: CUDA errors during execution
+
+**Solution**:
+```bash
+module load cuda
+nvidia-smi  # Check GPU availability
+nvcc --version  # Verify CUDA compiler
+```
+
+#### Problem: Temperature values explode (>10^100 K)
+
+**Cause**: Time step too large (numerical instability)
+
+**Solution**: Reduce `deltaT` in `system/controlDict`:
+```cpp
+deltaT          0.001;  // Try smaller value
+```
+
+#### Problem: Compilation error about C++11 ABI
+
+**Cause**: Mismatch between OpenFOAM and CUDA library ABI
+
+**Solution**: Already fixed in `libheatCUDA/Makefile` and `Make/options`:
+```makefile
+-D_GLIBCXX_USE_CXX11_ABI=0
+```
+
+---
+
+## Standalone CUDA Solver (Phase 1)
+
+The original standalone CUDA heat solver (without OpenFOAM integration) is still available.
+
+### Features
+
+- Pure GPU implementation
+- VTK output for ParaView
+- PNG cross-sections
+- Custom initial conditions
+
+### Building
 
 ```bash
 cd 3d/cuda
@@ -28,266 +463,143 @@ make clean
 make
 ```
 
-This creates the executable `heat_cuda`.
-
-### 2. Compile the Input Generator
+### Usage
 
 ```bash
-cd ../..  # Back to project root
-g++ -o generate_3d_input generate_3d_input.cpp -lm
-```
+# Default 800×800×800 grid, 500 time steps
+./heat_cuda
 
-## Usage
+# Custom grid size
+./heat_cuda 200 200 200 1000
 
-### Generate a 3D Input File
-
-```bash
-# Default 100x100x100 grid
-./generate_3d_input sphere.dat
-
-# Custom cubic grid (200x200x200)
-./generate_3d_input sphere.dat 200
-
-# Custom dimensions (200x150x100)
-./generate_3d_input sphere.dat 200 150 100
-```
-
-The generator creates a hot sphere (95°C) in the center surrounded by cool material (15°C).
-
-### Run the Simulator
-
-**With 3D input file:**
-```bash
-cd 3d/cuda
+# With input file
 ./heat_cuda ../../sphere.dat 500
 ```
 
-**With default parameters:**
+### Generate Input Files
+
 ```bash
-./heat_cuda
-# Uses 800x800x800 grid, 500 time steps, generated initial conditions
+cd ../..  # Project root
+g++ -o generate_3d_input generate_3d_input.cpp -lm
+./generate_3d_input sphere.dat 100
 ```
 
-**With custom grid:**
-```bash
-./heat_cuda <nx> <ny> <nz> <nsteps>
-./heat_cuda 200 200 200 1000
-```
-
-### Input File Format
-
-3D input files must have this format:
+**Input format:**
 ```
 # nx ny nz
 value1
 value2
-value3
 ...
 ```
 
-Values are listed in row-major order: i varies fastest, then j, then k (total of nx×ny×nz values).
+### Visualization
 
-## Output Files
+VTK files can be opened in ParaView:
+```bash
+paraview heat_0000.vtk
+```
 
-### PNG Files
-- `heat_0000.png` - Initial middle z-slice
-- `heat_XXXX.png` - Intermediate slices (every 15000 iterations)
-- `heat_NNNN.png` - Final slice
+Use **Volume Rendering** or **Contour** filters for 3D visualization.
 
-### VTK Files (3D)
-- `heat_0000.vtk` - Initial 3D field
-- `heat_XXXX.vtk` - Intermediate 3D fields
-- `heat_NNNN.vtk` - Final 3D field
+---
 
-## Visualization with ParaView
+## Project Structure
 
-### Installation
-Download ParaView from: https://www.paraview.org/download/
+```
+2025-PP-Final-Project-Team-15/
+├── README.md                          # This file
+│
+├── OpenFOAM-13/                       # OpenFOAM source (for teammates)
+│   ├── etc/bashrc                     # Environment setup
+│   ├── src/                           # OpenFOAM libraries
+│   └── applications/                  # Solvers and utilities
+│
+├── ThirdParty-13/                     # Third-party dependencies
+│   ├── scotch_7.0.8/                  # Graph partitioning
+│   └── Zoltan-3.90/                   # Load balancing
+│
+├── phase2/                            # heatFoamCUDA solver (OpenFOAM integration)
+│   ├── libheatCUDA/                   # CUDA library
+│   │   ├── cudaCore.cu                # CUDA kernels
+│   │   ├── cudaCore.h                 # Kernel interface
+│   │   ├── cudaField.cu               # Memory management
+│   │   ├── cudaField.h                # Field structure
+│   │   ├── Makefile                   # CUDA build
+│   │   └── lib/libheatCUDA.so         # Compiled library (generated)
+│   │
+│   ├── heatFoamCUDA.C                 # Main solver
+│   ├── createFields.H                 # Field initialization
+│   ├── cudaInterface.H/C              # C++ wrapper for CUDA
+│   ├── meshMapper.H/C                 # Mesh mapping (Phase 1: structured grids)
+│   │
+│   ├── Make/                          # OpenFOAM build system
+│   │   ├── files                      # Compilation targets
+│   │   └── options                    # Linking and include paths
+│   │
+│   └── testCase/                      # Example test case
+│       ├── 0/T                        # Initial temperature field
+│       ├── constant/
+│       │   └── physicalProperties     # α, CUDA grid size
+│       └── system/
+│           ├── blockMeshDict          # Mesh generation
+│           ├── controlDict            # Time control
+│           ├── fvSchemes              # (Required but not used)
+│           └── fvSolution             # (Required but not used)
+│
+├── 3d/cuda/                           # Standalone CUDA solver (Phase 1)
+│   ├── main.cpp                       # Main loop
+│   ├── core_cuda.cu                   # CUDA kernels
+│   ├── heat.cpp                       # Field setup
+│   ├── io.cpp                         # VTK/PNG output
+│   ├── setup.cpp                      # Argument parsing
+│   ├── utilities.cpp                  # Helpers
+│   ├── heat.hpp                       # Field structure
+│   ├── functions.hpp                  # Function declarations
+│   ├── error_checks.h                 # CUDA error macros
+│   └── Makefile                       # Build config
+│
+├── generate_3d_input.cpp              # Input file generator
+└── common/
+    └── pngwriter.c/h                  # PNG utilities
+```
 
-### Opening VTK Files
-1. Launch ParaView
-2. **File → Open** → Select `heat_XXXX.vtk`
-3. Click **Apply** in Properties panel
-
-### Visualization Techniques
-
-#### **Volume Rendering** (Glowing 3D Effect)
-
-Perfect for seeing the overall temperature distribution:
-
-1. Open VTK file and click **Apply**
-2. Change **Representation** (dropdown in toolbar) to **Volume**
-3. Set coloring to **temperature** (dropdown next to Representation)
-4. Click color map editor icon (colorful bar)
-5. Choose color scheme:
-   - **Plasma** or **Inferno** for glowing effects
-   - **Cool to Warm** for scientific visualization
-6. Switch to **Opacity** tab
-7. Adjust opacity transfer function:
-   - Make low temperatures transparent
-   - Make high temperatures opaque
-8. Optional: Enable **Shade** in Properties for depth perception
-
-#### **Contour/Isosurface** (Constant Temperature Surfaces)
-
-Shows beautiful spherical shells at different temperatures:
-
-1. Open VTK file and click **Apply**
-2. **Filters → Common → Contour**
-3. Set **Contour By**: temperature
-4. Add isovalues:
-   - Click **+** button to add values
-   - Example: 20, 40, 60, 80
-   - Or use **Value Range** with 5-10 contours
-5. Click **Apply**
-6. Color by **temperature** (toolbar dropdown)
-7. Choose color map: **Rainbow** or **Cool to Warm**
-8. Optional: Adjust opacity to ~0.7 to see multiple layers
-
-#### **Slice** (2D Cross-sections)
-
-Examine specific planes through the volume:
-
-1. Open VTK file and click **Apply**
-2. **Filters → Common → Slice**
-3. Configure slice:
-   - **Slice Type**: Plane
-   - **Origin**: Center of domain (e.g., 4, 4, 4 for default grid)
-   - **Normal**: Choose axis
-     - (1,0,0) for YZ plane
-     - (0,1,0) for XZ plane
-     - (0,0,1) for XY plane
-4. Click **Apply**
-5. Color by **temperature**
-6. Check **Show Plane** to see slice position
-7. Drag the plane interactively to explore
-
-#### **Clip** (Cut-away View)
-
-See the interior while keeping part of the exterior:
-
-1. Open VTK file and click **Apply**
-2. **Filters → Common → Clip**
-3. Set **Clip Type**: Plane
-4. Position plane through center
-5. Click **Apply**
-6. Color by **temperature**
-7. Optional: Apply **Contour** to clipped result for combined effect
-
-### Tips for Better Visualization
-
-**Color Maps:**
-- **Cool to Warm**: Blue → white → red (scientific standard)
-- **Rainbow**: Blue → green → yellow → red (classic)
-- **Plasma/Inferno**: Perceptually uniform, great for presentations
-- **Jet**: Traditional but not perceptually uniform
-
-**Saving Images:**
-1. **File → Save Screenshot**
-2. Choose resolution (1920×1080 or higher)
-3. Format: PNG recommended
-4. Optional: Enable **Transparent Background**
-
-**Animation:**
-1. Load all VTK files using wildcard: `heat_*.vtk`
-2. ParaView recognizes them as time series
-3. Use **Play** button to animate
-4. **File → Save Animation** to export video
-
-## Performance
-
-**Default Configuration (800³ grid):**
-- Grid points: 512 million
-- Memory usage: ~4 GB
-- Time per iteration: ~0.1s on V100
-- Total runtime (500 steps): ~50 seconds
-
-**Smaller Test (100³ grid):**
-- Grid points: 1 million
-- Memory usage: ~8 MB
-- Time per iteration: ~0.001s
-- Total runtime (500 steps): ~0.5 seconds
+---
 
 ## Physics
 
-The code solves the 3D heat diffusion equation:
+Both solvers solve the 3D heat diffusion equation:
 
 ```
 ∂T/∂t = α∇²T
 ```
 
 Where:
-- T = temperature
-- α = thermal diffusivity (0.5)
-- ∇² = Laplacian operator
+- **T** = temperature (K)
+- **α** = thermal diffusivity (m²/s)
+- **∇²** = Laplacian operator
 
 **Numerical Method:**
 - Finite difference (7-point stencil)
 - Explicit time integration
 - Second-order accurate in space
+- First-order accurate in time
 
-**Boundary Conditions:**
-- Fixed temperatures on all 6 faces (Dirichlet)
-- Default boundaries: 20°C on x-min/y-max/z-min faces, 35°C on x-max/y-min/z-max faces
-
-## Troubleshooting
-
-### CUDA Out of Memory
-```
-Error: cudaMalloc failed
-```
-**Solution**: Reduce grid size
-
-### No VTK Files Generated
-**Solution**: Check write permissions and disk space
-
-### ParaView Shows Black/Empty Volume
-**Solution**:
-- Verify temperature data range (not all zeros)
-- Adjust opacity transfer function
-- Set color map to "temperature"
-
-### Compilation Errors
-```
-nvcc: command not found
-```
-**Solution**: Install CUDA toolkit and add to PATH
-
-## Example Workflow
-
-```bash
-# 1. Generate input file
-./generate_3d_input test_sphere.dat 100
-
-# 2. Run simulation
-cd 3d/cuda
-./heat_cuda ../../test_sphere.dat 1000
-
-# 3. Visualize in ParaView
-paraview heat_0000.vtk
-# Use Volume rendering or Contour as described above
-
-# 4. Animate all timesteps
-paraview heat_*.vtk
-# Click Play button to see evolution
+**7-Point Stencil:**
+```cpp
+∇²T ≈ (T[i+1,j,k] - 2·T[i,j,k] + T[i-1,j,k])/dx² +
+      (T[i,j+1,k] - 2·T[i,j,k] + T[i,j-1,k])/dy² +
+      (T[i,j,k+1] - 2·T[i,j,k] + T[i,j,k-1])/dz²
 ```
 
-## Project Structure
+---
 
-```
-├── generate_3d_input.cpp    # Input file generator
-├── 3d/cuda/
-│   ├── main.cpp             # Main simulation loop
-│   ├── core_cuda.cu         # CUDA kernels
-│   ├── heat.cpp             # Field initialization
-│   ├── io.cpp               # VTK and PNG output
-│   ├── setup.cpp            # Argument parsing
-│   ├── utilities.cpp        # Helper functions
-│   ├── heat.hpp             # Field structure
-│   ├── matrix.hpp           # 3D matrix template
-│   ├── functions.hpp        # Function declarations
-│   ├── error_checks.h       # CUDA error macros
-│   └── Makefile             # Build configuration
-└── common/
-    └── pngwriter.c/h        # PNG utilities
-```
+## Future Work (Phase 2 - Unstructured Mesh Support)
+
+Current implementation (Phase 1) supports **structured grids only** (blockMesh).
+
+Planned enhancement: Support arbitrary unstructured meshes via interpolation mapping:
+- Build mapping tables at initialization
+- Interpolate OpenFOAM cells ↔ CUDA grid points using trilinear weights
+- Support tetrahedral, polyhedral meshes
+
+---

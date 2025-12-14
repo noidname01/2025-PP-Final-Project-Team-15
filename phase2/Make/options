@@ -1,0 +1,21 @@
+EXE_INC = \
+    -D_GLIBCXX_USE_CXX11_ABI=0 \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude \
+    -I$(LIB_SRC)/OpenFOAM/lnInclude \
+    -I$(LIB_SRC)/OSspecific/POSIX/lnInclude \
+    -I./libheatCUDA \
+    -I$(CUDA_HOME)/include
+
+EXE_LIBS = \
+    -lfiniteVolume \
+    -lfvModels \
+    -lfvConstraints \
+    -lmeshTools \
+    -lOpenFOAM \
+    -L$(PWD)/libheatCUDA/lib \
+    -lheatCUDA \
+    -L$(CUDA_HOME)/lib64 \
+    -lcudart \
+    -Wl,-rpath,$(PWD)/libheatCUDA/lib \
+    -Wl,-rpath,$(CUDA_HOME)/lib64

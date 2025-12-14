@@ -43,3 +43,7 @@
 heat_cuda
 *.png
 *.vtk
+
+# Third party libraries
+OpenFOAM-13/
+ThirdParty-13/

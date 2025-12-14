@@ -1,0 +1,5 @@
+heatFoamCUDA.C
+cudaInterface.C
+meshMapper.C
+
+EXE = $(FOAM_USER_APPBIN)/heatFoamCUDA

@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "CUDA",
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/ohpc/Taiwania3/pkg/intel/2024/oneapi/tbb/2021.11/include",
@@ -17,6 +17,21 @@
             "compilerArgs": [
                 "-arch=sm_70"
             ],
+            "cStandard": "c17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-x64"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/work/HPC_SYS/devtoolset/devtoolset-10/root/usr/include/**",
+                "/usr/include/**",
+                "/usr/local/include/**",
+                "/usr/lib/gcc/x86_64-redhat-linux/8/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/work/HPC_SYS/devtoolset/devtoolset-10/root/usr/bin/gcc",
             "cStandard": "c17",
             "cppStandard": "gnu++14",
             "intelliSenseMode": "linux-gcc-x64"
