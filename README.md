@@ -33,6 +33,9 @@ cd /path/to/your/workspace
 git clone <repository-url>
 cd 2025-PP-Final-Project-Team-15
 
+cp -r /home/u5613200/2025-PP-Final-Project-Team-15/OpenFOAM-13 .
+cp -r /home/u5613200/2025-PP-Final-Project-Team-15/ThirdParty-13 .
+
 # Ensure you have OpenFOAM-13 and ThirdParty-13 directories
 ls -d OpenFOAM-13 ThirdParty-13
 ```
@@ -394,56 +397,6 @@ while (runTime.run()) {
 
 ---
 
-### Troubleshooting (OpenFOAM)
-
-#### Problem: `heatFoamCUDA: command not found`
-
-**Solution**:
-```bash
-source OpenFOAM-13/etc/bashrc
-which heatFoamCUDA  # Verify it's in PATH
-```
-
-#### Problem: `libheatCUDA.so: cannot open shared object file`
-
-**Solution**:
-```bash
-cd phase2/libheatCUDA
-make clean && make
-ls -lh lib/libheatCUDA.so  # Verify exists
-```
-
-The solver uses `-Wl,-rpath` to find the library automatically.
-
-#### Problem: CUDA errors during execution
-
-**Solution**:
-```bash
-module load cuda
-nvidia-smi  # Check GPU availability
-nvcc --version  # Verify CUDA compiler
-```
-
-#### Problem: Temperature values explode (>10^100 K)
-
-**Cause**: Time step too large (numerical instability)
-
-**Solution**: Reduce `deltaT` in `system/controlDict`:
-```cpp
-deltaT          0.001;  // Try smaller value
-```
-
-#### Problem: Compilation error about C++11 ABI
-
-**Cause**: Mismatch between OpenFOAM and CUDA library ABI
-
-**Solution**: Already fixed in `libheatCUDA/Makefile` and `Make/options`:
-```makefile
--D_GLIBCXX_USE_CXX11_ABI=0
-```
-
----
-
 ## Standalone CUDA Solver (Phase 1)
 
 The original standalone CUDA heat solver (without OpenFOAM integration) is still available.
@@ -458,7 +411,7 @@ The original standalone CUDA heat solver (without OpenFOAM integration) is still
 ### Building
 
 ```bash
-cd 3d/cuda
+cd phase1/3d/cuda
 make clean
 make
 ```
@@ -473,7 +426,7 @@ make
 ./heat_cuda 200 200 200 1000
 
 # With input file
-./heat_cuda ../../sphere.dat 500
+./heat_cuda ../../common/sphere_3d.dat 500
 ```
 
 ### Generate Input Files
@@ -481,7 +434,7 @@ make
 ```bash
 cd ../..  # Project root
 g++ -o generate_3d_input generate_3d_input.cpp -lm
-./generate_3d_input sphere.dat 100
+./generate_3d_input sphere_3d.dat 100
 ```
 
 **Input format:**
