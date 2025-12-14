@@ -35,6 +35,7 @@ cd 2025-PP-Final-Project-Team-15
 
 cp -r /home/u5613200/2025-PP-Final-Project-Team-15/OpenFOAM-13 .
 cp -r /home/u5613200/2025-PP-Final-Project-Team-15/ThirdParty-13 .
+cp -r /home/u5613200/opt/flex-2.6.4 $HOME/opt/flex-2.6.4
 
 # Ensure you have OpenFOAM-13 and ThirdParty-13 directories
 ls -d OpenFOAM-13 ThirdParty-13
@@ -57,7 +58,28 @@ which blockMesh  # Should show path to OpenFOAM binary
 
 **Important**: You must source this file in every new terminal session before compiling or running the solver.
 
-#### 3. Load CUDA Module (HPC Cluster)
+#### 3. Set Up Flex Library
+
+OpenFOAM requires a specific version of flex. Add these lines to your `~/.bashrc`:
+
+```bash
+# Add to ~/.bashrc for permanent setup
+export PATH=$HOME/opt/flex-2.6.4/bin:$PATH
+export LD_LIBRARY_PATH=$HOME/opt/flex-2.6.4/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/opt/flex-2.6.4/lib64:$LD_LIBRARY_PATH
+```
+
+Then reload your bashrc:
+```bash
+source ~/.bashrc
+
+# Verify flex is available
+flex --version  # Should show flex 2.6.4
+```
+
+**Note**: The flex library should already be copied to `$HOME/opt/flex-2.6.4` from step 1.
+
+#### 4. Load CUDA Module (HPC Cluster)
 
 ```bash
 # On TWCC HPC cluster, load CUDA
@@ -67,7 +89,7 @@ module load cuda
 nvcc --version  # Should show CUDA 12.8 or similar
 ```
 
-#### 4. Compile the CUDA Library
+#### 5. Compile the CUDA Library
 
 ```bash
 cd phase2/libheatCUDA
@@ -78,7 +100,7 @@ make
 ls -lh lib/libheatCUDA.so  # Should show ~41KB shared library
 ```
 
-#### 5. Compile the OpenFOAM Solver
+#### 6. Compile the OpenFOAM Solver
 
 ```bash
 cd ..  # Back to phase2 directory
@@ -91,7 +113,7 @@ which heatFoamCUDA  # Should show path in $FOAM_USER_APPBIN
 
 **Note**: `wmake` is OpenFOAM's build system. It will compile `heatFoamCUDA.C`, `cudaInterface.C`, and `meshMapper.C`.
 
-#### 6. Navigate to Test Case
+#### 7. Navigate to Test Case
 
 ```bash
 cd testCase
@@ -101,7 +123,7 @@ ls -la
 # Should see: 0/ constant/ system/
 ```
 
-#### 7. Generate Mesh
+#### 8. Generate Mesh
 
 ```bash
 # Generate mesh using blockMesh
@@ -114,7 +136,7 @@ ls constant/polyMesh/
 
 This creates a 50×50×50 structured mesh (125,000 cells) in a 10cm cube.
 
-#### 8. Run the CUDA-Accelerated Solver
+#### 9. Run the CUDA-Accelerated Solver
 
 ```bash
 # Execute the solver
@@ -146,7 +168,7 @@ Time = 10s
 End
 ```
 
-#### 9. Convert Results to VTK Format
+#### 10. Convert Results to VTK Format
 
 ```bash
 # Convert OpenFOAM results to VTK format for ParaView
@@ -157,7 +179,7 @@ ls VTK/
 # Should see: testCase_0.vtk testCase_100.vtk ... testCase_2000.vtk
 ```
 
-#### 10. Visualize with ParaView (Volume Rendering)
+#### 11. Visualize with ParaView (Volume Rendering)
 
 ```bash
 # Load all VTK files as time series
