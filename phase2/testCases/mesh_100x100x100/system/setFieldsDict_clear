@@ -10,18 +10,30 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    location    "constant";
-    object      physicalProperties;
+    location    "system";
+    object      setFieldsDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Thermal diffusivity [m^2/s]
-// For aluminum: alpha ~ 9.7e-5 m^2/s
-alpha           alpha [0 2 -1 0 0 0 0] 9.7e-5;
+// Hot-cold plate configuration
+// Bottom half (z < 0.05m): 300K (cold)
+// Top half (z >= 0.05m): 400K (hot)
 
-// CUDA grid dimensions (should match blockMesh cells for Phase 1)
-cudaGridNx      50;
-cudaGridNy      50;
-cudaGridNz      50;
+defaultFieldValues
+(
+    volScalarFieldValue T 300  // Default: cold (300K)
+);
+
+regions
+(
+    boxToCell
+    {
+        box (0 0 0.05) (0.1 0.1 0.1);  // Top half: hot region
+        fieldValues
+        (
+            volScalarFieldValue T 400  // Hot plate at 400K
+        );
+    }
+);
 
 // ************************************************************************* //

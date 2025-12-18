@@ -14,23 +14,26 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-convertToMeters 0.01;  // Convert from cm to meters
+convertToMeters 0.01;  // Convert cm to meters
 
 vertices
 (
-    (0 0 0)     // 0
-    (10 0 0)    // 1
-    (10 10 0)   // 2
-    (0 10 0)    // 3
-    (0 0 10)    // 4
-    (10 0 10)   // 5
-    (10 10 10)  // 6
-    (0 10 10)   // 7
+    (0 0 0)     // 0: Bottom-front-left
+    (10 0 0)    // 1: Bottom-front-right
+    (10 10 0)   // 2: Bottom-back-right
+    (0 10 0)    // 3: Bottom-back-left
+    (0 0 10)    // 4: Top-front-left
+    (10 0 10)   // 5: Top-front-right
+    (10 10 10)  // 6: Top-back-right
+    (0 10 10)   // 7: Top-back-left
 );
 
 blocks
 (
-    hex (0 1 2 3 4 5 6 7) (50 50 50) simpleGrading (1 1 1)
+    hex (0 1 2 3 4 5 6 7) (150 150 150) simpleGrading (1 1 1)
+    // 150 × 150 × 150 cells = 3,375,000 total cells
+    // Domain: 0.1m × 0.1m × 0.1m cube
+    // Cell spacing: dx = 0.000667m = 0.67mm
 );
 
 edges
@@ -41,50 +44,55 @@ boundary
 (
     hot
     {
-        type wall;
+        type patch;
         faces
         (
-            (4 5 6 7)  // Top face - hot boundary (z=zMax)
+            (4 5 6 7)  // Top face (z = zMax)
         );
     }
+
     cold
     {
-        type wall;
+        type patch;
         faces
         (
-            (0 3 2 1)  // Bottom face - cold boundary (z=zMin)
+            (0 3 2 1)  // Bottom face (z = zMin)
         );
     }
+
     left
     {
-        type wall;
+        type patch;
         faces
         (
-            (0 4 7 3)  // Left face (x=xMin)
+            (0 4 7 3)  // Left face (x = xMin)
         );
     }
+
     right
     {
-        type wall;
+        type patch;
         faces
         (
-            (1 2 6 5)  // Right face (x=xMax)
+            (1 2 6 5)  // Right face (x = xMax)
         );
     }
+
     front
     {
-        type wall;
+        type patch;
         faces
         (
-            (0 1 5 4)  // Front face (y=yMin)
+            (0 1 5 4)  // Front face (y = yMin)
         );
     }
+
     back
     {
-        type wall;
+        type patch;
         faces
         (
-            (3 7 6 2)  // Back face (y=yMax)
+            (3 7 6 2)  // Back face (y = yMax)
         );
     }
 );

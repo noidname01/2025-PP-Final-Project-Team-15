@@ -1,0 +1,62 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  13                                    |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      setFieldsDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+defaultFieldValues
+(
+    volScalarFieldValue T 300
+);
+
+regions
+(
+    // Hot spot 1 - Bottom-left corner
+    sphereToCell
+    {
+        centre (0.025 0.025 0.025);  // Quarter-way from origin
+        radius 0.015;                 // 1.5cm radius
+
+        fieldValues
+        (
+            volScalarFieldValue T 500
+        );
+    }
+
+    // Hot spot 2 - Top-right corner
+    sphereToCell
+    {
+        centre (0.075 0.075 0.075);  // Three-quarters from origin
+        radius 0.015;                 // 1.5cm radius
+
+        fieldValues
+        (
+            volScalarFieldValue T 450  // Slightly cooler
+        );
+    }
+
+    // Hot spot 3 - Center (hottest)
+    sphereToCell
+    {
+        centre (0.05 0.05 0.05);     // Domain center
+        radius 0.010;                 // Smaller, 1cm radius
+
+        fieldValues
+        (
+            volScalarFieldValue T 550  // Hottest spot
+        );
+    }
+);
+
+// ************************************************************************* //

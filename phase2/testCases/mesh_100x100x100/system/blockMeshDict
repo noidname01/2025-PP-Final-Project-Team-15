@@ -1,0 +1,104 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  13                                    |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+convertToMeters 0.01;  // Convert cm to meters
+
+vertices
+(
+    (0 0 0)     // 0: Bottom-front-left
+    (10 0 0)    // 1: Bottom-front-right
+    (10 10 0)   // 2: Bottom-back-right
+    (0 10 0)    // 3: Bottom-back-left
+    (0 0 10)    // 4: Top-front-left
+    (10 0 10)   // 5: Top-front-right
+    (10 10 10)  // 6: Top-back-right
+    (0 10 10)   // 7: Top-back-left
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) (100 100 100) simpleGrading (1 1 1)
+    // 100 × 100 × 100 cells = 1,000,000 total cells
+    // Domain: 0.1m × 0.1m × 0.1m cube
+    // Cell spacing: dx = 0.001m = 1mm
+);
+
+edges
+(
+);
+
+boundary
+(
+    hot
+    {
+        type patch;
+        faces
+        (
+            (4 5 6 7)  // Top face (z = zMax)
+        );
+    }
+
+    cold
+    {
+        type patch;
+        faces
+        (
+            (0 3 2 1)  // Bottom face (z = zMin)
+        );
+    }
+
+    left
+    {
+        type patch;
+        faces
+        (
+            (0 4 7 3)  // Left face (x = xMin)
+        );
+    }
+
+    right
+    {
+        type patch;
+        faces
+        (
+            (1 2 6 5)  // Right face (x = xMax)
+        );
+    }
+
+    front
+    {
+        type patch;
+        faces
+        (
+            (0 1 5 4)  // Front face (y = yMin)
+        );
+    }
+
+    back
+    {
+        type patch;
+        faces
+        (
+            (3 7 6 2)  // Back face (y = yMax)
+        );
+    }
+);
+
+mergePatchPairs
+(
+);
+
+// ************************************************************************* //

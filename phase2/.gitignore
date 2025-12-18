@@ -1,3 +1,6 @@
 *.dep
 **/linux64GccDPInt32Opt/**
 **/polyMesh/**
+
+**/results_time_profiling/**
+**/results_visualization/**

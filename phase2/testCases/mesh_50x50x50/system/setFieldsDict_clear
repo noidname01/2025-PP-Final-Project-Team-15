@@ -9,49 +9,31 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       volScalarField;
-    location    "0";
-    object      T;
+    class       dictionary;
+    location    "system";
+    object      setFieldsDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 0 0 1 0 0 0];  // Temperature in Kelvin
+// Hot-cold plate configuration
+// Bottom half (z < 0.05m): 300K (cold)
+// Top half (z >= 0.05m): 400K (hot)
 
-internalField   uniform 300;
+defaultFieldValues
+(
+    volScalarFieldValue T 300  // Default: cold (300K)
+);
 
-boundaryField
-{
-    hot
+regions
+(
+    boxToCell
     {
-        type            fixedValue;
-        value           uniform 400;  // Hot top surface at 400K
+        box (0 0 0.05) (0.1 0.1 0.1);  // Top half: hot region
+        fieldValues
+        (
+            volScalarFieldValue T 400  // Hot plate at 400K
+        );
     }
-
-    cold
-    {
-        type            fixedValue;
-        value           uniform 300;  // Cold bottom surface at 300K
-    }
-
-    left
-    {
-        type            zeroGradient;  // Insulated left wall
-    }
-
-    right
-    {
-        type            zeroGradient;  // Insulated right wall
-    }
-
-    front
-    {
-        type            zeroGradient;  // Insulated front wall
-    }
-
-    back
-    {
-        type            zeroGradient;  // Insulated back wall
-    }
-}
+);
 
 // ************************************************************************* //

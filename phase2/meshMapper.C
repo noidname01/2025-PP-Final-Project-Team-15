@@ -80,10 +80,20 @@ void Foam::MeshMapper::mapToCUDA
         cudaData[idx] = 0.0;
     }
 
+    // Debug: Track statistics
+    scalar minT = GREAT;
+    scalar maxT = -GREAT;
+    label hotCells = 0;
+
     // Map each OpenFOAM cell to CUDA grid
     forAll(fieldData, cellI)
     {
         const vector& cellCenter = C[cellI];
+        scalar cellTemp = fieldData[cellI];
+
+        minT = min(minT, cellTemp);
+        maxT = max(maxT, cellTemp);
+        if (cellTemp > 400.0) hotCells++;
 
         // Compute CUDA grid indices
         label i = label((cellCenter.x() - xMin_) / dx_) + 1;  // +1 for ghost layer
@@ -99,7 +109,19 @@ void Foam::MeshMapper::mapToCUDA
         label idx = i * (ny_ + 2) * (nz_ + 2) + j * (nz_ + 2) + k;
 
         cudaData[idx] = fieldData[cellI];
+
+        // Debug hot cells (sphere region)
+        if (cellTemp > 400.0 && hotCells <= 10)
+        {
+            Info << "  Hot cell " << cellI << ": center=" << cellCenter
+                 << ", T=" << cellTemp
+                 << " -> CUDA[" << i << "," << j << "," << k << "]" << endl;
+        }
     }
+
+    Info << "mapToCUDA: " << fieldData.size() << " OpenFOAM cells mapped" << nl
+         << "  Temperature range: [" << minT << ", " << maxT << "]" << nl
+         << "  Hot cells (T>400K): " << hotCells << endl;
 
 }
 
@@ -161,9 +183,13 @@ void Foam::MeshMapper::updateBoundaries
         // Get average normal to determine which CUDA face
         vector avgNormal = average(patch.nf());
 
-        // Get boundary value (for fixedValue) or use adjacent cell value (for zeroGradient)
+        // Get boundary value (for fixedValue)
         bool isFixedValue = (pField.type() == "fixedValue");
-        scalar bcValue = isFixedValue ? pField[0] : 0.0;
+        scalar bcValue = 0.0;
+        if (isFixedValue && pField.size() > 0)
+        {
+            bcValue = pField[0];
+        }
 
         // Determine which CUDA boundary face and set all ghost cells
         if (mag(avgNormal.z() - 1.0) < 0.1)  // Top face (z = zMax, k = nz+1)
@@ -173,7 +199,15 @@ void Foam::MeshMapper::updateBoundaries
                 for (label j = 1; j <= ny_; j++)
                 {
                     label idx = i * (ny_ + 2) * (nz_ + 2) + j * (nz_ + 2) + (nz_ + 1);
-                    cudaData[idx] = bcValue;
+                    if (!isFixedValue)  // zeroGradient: copy from adjacent interior
+                    {
+                        label interiorIdx = i * (ny_ + 2) * (nz_ + 2) + j * (nz_ + 2) + nz_;
+                        cudaData[idx] = cudaData[interiorIdx];
+                    }
+                    else
+                    {
+                        cudaData[idx] = bcValue;
+                    }
                 }
             }
         }
@@ -184,7 +218,15 @@ void Foam::MeshMapper::updateBoundaries
                 for (label j = 1; j <= ny_; j++)
                 {
                     label idx = i * (ny_ + 2) * (nz_ + 2) + j * (nz_ + 2) + 0;
-                    cudaData[idx] = bcValue;
+                    if (!isFixedValue)  // zeroGradient: copy from adjacent interior
+                    {
+                        label interiorIdx = i * (ny_ + 2) * (nz_ + 2) + j * (nz_ + 2) + 1;
+                        cudaData[idx] = cudaData[interiorIdx];
+                    }
+                    else
+                    {
+                        cudaData[idx] = bcValue;
+                    }
                 }
             }
         }
@@ -265,6 +307,21 @@ void Foam::MeshMapper::updateBoundaries
             }
         }
     }
+
+    // Debug: Check if hot cells still exist after boundary update
+    label hotCount = 0;
+    label totalSize = (nx_ + 2) * (ny_ + 2) * (nz_ + 2);
+    scalar cudaMin = GREAT;
+    scalar cudaMax = -GREAT;
+    for (label idx = 0; idx < totalSize; idx++)
+    {
+        cudaMin = min(cudaMin, cudaData[idx]);
+        cudaMax = max(cudaMax, cudaData[idx]);
+        if (cudaData[idx] > 400.0) hotCount++;
+    }
+    Info << "After updateBoundaries:" << nl
+         << "  CUDA array range: [" << cudaMin << ", " << cudaMax << "]" << nl
+         << "  Hot cells (T>400K): " << hotCount << endl;
 }
 
 

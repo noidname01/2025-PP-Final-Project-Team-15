@@ -1,0 +1,59 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  13                                    |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      T;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 1 0 0 0];  // Temperature in Kelvin
+
+internalField   uniform 300;
+
+boundaryField
+{
+    hot
+    {
+        // type            fixedValue;
+        // value           uniform 400;  // Hot top surface at 400K
+        type               zeroGradient;  // Adiabatic top surface
+    }
+
+    cold
+    {
+        // type            fixedValue;
+        // value           uniform 300;  // Cold bottom surface at 300K
+        type               zeroGradient;  // Adiabatic top surface
+    }
+
+    left
+    {
+        type            zeroGradient;  // Insulated left wall
+    }
+
+    right
+    {
+        type            zeroGradient;  // Insulated right wall
+    }
+
+    front
+    {
+        type            zeroGradient;  // Insulated front wall
+    }
+
+    back
+    {
+        type            zeroGradient;  // Insulated back wall
+    }
+}
+
+// ************************************************************************* //

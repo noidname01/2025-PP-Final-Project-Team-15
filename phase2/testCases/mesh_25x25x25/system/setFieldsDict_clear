@@ -11,27 +11,29 @@ FoamFile
     format      ascii;
     class       dictionary;
     location    "system";
-    object      fvSolution;
+    object      setFieldsDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Note: These solvers are not used since CUDA handles the evolution
-// However, valid dictionaries are required for OpenFOAM to run
+// Hot-cold plate configuration
+// Bottom half (z < 0.05m): 300K (cold)
+// Top half (z >= 0.05m): 400K (hot)
 
-solvers
-{
-    T
+defaultFieldValues
+(
+    volScalarFieldValue T 300  // Default: cold (300K)
+);
+
+regions
+(
+    boxToCell
     {
-        solver          PCG;
-        preconditioner  DIC;
-        tolerance       1e-06;
-        relTol          0.1;
+        box (0 0 0.05) (0.1 0.1 0.1);  // Top half: hot region
+        fieldValues
+        (
+            volScalarFieldValue T 400  // Hot plate at 400K
+        );
     }
-}
-
-SIMPLE
-{
-    nNonOrthogonalCorrectors 0;
-}
+);
 
 // ************************************************************************* //

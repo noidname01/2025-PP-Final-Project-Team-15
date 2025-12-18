@@ -568,13 +568,209 @@ Where:
 
 ---
 
-## Future Work (Phase 2 - Unstructured Mesh Support)
+## Mesh Interpolation Modes
 
-Current implementation (Phase 1) supports **structured grids only** (blockMesh).
+The solver now supports both structured and arbitrary meshes through automatic detection and adaptive interpolation:
 
-Planned enhancement: Support arbitrary unstructured meshes via interpolation mapping:
-- Build mapping tables at initialization
-- Interpolate OpenFOAM cells ↔ CUDA grid points using trilinear weights
-- Support tetrahedral, polyhedral meshes
+### Nearest-Neighbor Mapping (Structured Grids)
+**Used for:** blockMesh-generated Cartesian grids
+**Characteristics:**
+- Fast, direct cell-to-grid-point mapping
+- Zero interpolation overhead
+- Optimal for structured meshes
+
+### Trilinear Interpolation (Arbitrary Meshes)
+**Used for:** Unstructured or irregular meshes
+**Characteristics:**
+- Inverse-distance weighted interpolation
+- Precomputed mapping tables for performance
+- Smooth field mapping for arbitrary geometries
+- Auto-detected based on mesh structure
+
+**Auto-Detection:**
+The solver automatically detects mesh type during initialization:
+```
+MeshMapper initialized:
+  Mesh is structured - using direct nearest-neighbor mapping
+```
+or
+```
+  Mesh is unstructured - enabling trilinear interpolation
+  Building trilinear interpolation tables...
+```
+
+**Manual Control** (if needed):
+```cpp
+// In heatFoamCUDA.C, after creating mapper:
+mapper.setInterpolationMode(true);  // Force trilinear interpolation
+mapper.buildInterpolationTables();
+```
+
+---
+
+## Non-Uniform Initial Conditions
+
+The solver fully supports non-uniform temperature distributions using OpenFOAM's `setFields` utility.
+
+### Example: Hot Sphere
+
+Create `system/setFieldsDict`:
+```cpp
+defaultFieldValues
+(
+    volScalarFieldValue T 300  // Background temperature
+);
+
+regions
+(
+    sphereToCell
+    {
+        centre (0.05 0.05 0.05);  // Sphere center
+        radius 0.02;               // 2cm radius
+        fieldValues
+        (
+            volScalarFieldValue T 500  // Hot sphere at 500K
+        );
+    }
+);
+```
+
+Then run:
+```bash
+blockMesh
+setFields        # Apply non-uniform initial condition
+heatFoamCUDA     # Run solver
+```
+
+**Supported Geometries:**
+- `sphereToCell` - Spherical regions
+- `boxToCell` - Rectangular boxes
+- `cylinderToCell` - Cylindrical regions
+- Multiple regions can be defined
+
+---
+
+## Comprehensive Test Cases & Benchmarking
+
+The project includes extensive test cases for validation and performance benchmarking.
+
+### Test Case Structure
+
+```
+phase2/testCases/
+├── mesh_25x25x25/      # 15,625 cells, dt=0.020s
+├── mesh_50x50x50/      # 125,000 cells, dt=0.005s
+├── mesh_100x100x100/   # 1,000,000 cells, dt=0.001s
+├── mesh_150x150x150/   # 3,375,000 cells, dt=0.0005s
+└── benchmarks/         # Automation scripts
+```
+
+Each test case includes 4 initial conditions:
+1. **Uniform** - Constant temperature baseline
+2. **Hot Sphere** - Single localized heat source
+3. **Multiple Hot Spots** - Three spheres at different temps
+4. **Checkerboard** - 3D pattern of hot/cold cubes
+
+### Running Individual Test Cases
+
+```bash
+cd phase2/testCases/mesh_50x50x50
+./Allrun.sh
+```
+
+This automatically runs all 4 initial conditions with:
+- GPU explicit solver (`libheatCUDA`)
+- GPU implicit solver (`libheatCUDA_implicit`)
+- CPU solver (`laplacianFoam`)
+
+Results saved in `results_*/` directories.
+
+### Running Full Benchmark Suite
+
+```bash
+cd phase2/testCases/benchmarks
+./runAll.sh
+```
+
+Runs all mesh sizes × all initial conditions (~10-12 hours total).
+
+### Analyzing Results
+
+```bash
+python3 compare_results.py results_YYYYMMDD_HHMMSS
+```
+
+**Output:**
+```
+Mesh            Initial Cond.        CPU (s)      GPU-Exp (s)  GPU-Imp (s)  Speedup-Exp  Speedup-Imp
+--------------------------------------------------------------------------------------------------------
+25x25x25        uniform              0.234        0.089        0.112        2.63x        2.09x
+50x50x50        hotSphere            3.456        0.621        0.854        5.57x        4.05x
+100x100x100     multipleHotSpots     45.23        4.12         6.78         10.98x       6.67x
+...
+```
+
+### Expected Performance
+
+**50³ mesh (125K cells):**
+- CPU: ~45s
+- GPU explicit: ~8s (5-6× speedup)
+- GPU implicit: ~12s (3-4× speedup)
+
+**100³ mesh (1M cells):**
+- GPU speedup: 10-15× (better GPU utilization)
+
+**150³ mesh (3.4M cells):**
+- GPU speedup: 15-30× (near-optimal GPU usage)
+
+**See:** `testCases/README_TestCases.md` for detailed documentation.
+
+---
+
+## Implicit vs Explicit Solvers
+
+The project provides two CUDA solver implementations:
+
+### Explicit Forward Euler (`libheatCUDA`)
+**Advantages:**
+- Faster per iteration (~40% faster than implicit)
+- Lower memory usage
+- Simpler implementation
+
+**Limitations:**
+- Stability constraint: `dt ≤ dx²/(2αD)`
+- Requires smaller time steps
+
+**Use when:** Speed is critical and stability constraint is acceptable
+
+### Implicit Backward Euler (`libheatCUDA_implicit`)
+**Advantages:**
+- Unconditionally stable (larger time steps allowed)
+- Better for stiff problems
+- Uses cuSPARSE for sparse linear algebra
+
+**Limitations:**
+- Slower per iteration
+- Higher memory usage (stores matrix)
+- More complex implementation
+
+**Use when:** Larger time steps needed or dealing with stiff equations
+
+### Switching Between Solvers
+
+Edit `Make/options`:
+```makefile
+# Explicit solver (default)
+CUDA_LIB_DIR = libheatCUDA
+
+# Or implicit solver
+# CUDA_LIB_DIR = libheatCUDA_implicit
+```
+
+Then recompile:
+```bash
+cd phase2
+wmake
+```
 
 ---

@@ -1,0 +1,79 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  13                                    |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      setFieldsDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+defaultFieldValues
+(
+    volScalarFieldValue T 300
+);
+
+regions
+(
+    // 3D checkerboard pattern with 8 hot cubes
+
+    // Bottom layer (z = 0-0.025)
+    // Row 1
+    boxToCell
+    {
+        box (0.000 0.000 0.000) (0.025 0.025 0.025);
+        fieldValues ( volScalarFieldValue T 400 );
+    }
+
+    boxToCell
+    {
+        box (0.050 0.000 0.000) (0.075 0.025 0.025);
+        fieldValues ( volScalarFieldValue T 400 );
+    }
+
+    boxToCell
+    {
+        box (0.000 0.050 0.000) (0.025 0.075 0.025);
+        fieldValues ( volScalarFieldValue T 400 );
+    }
+
+    boxToCell
+    {
+        box (0.050 0.050 0.000) (0.075 0.075 0.025);
+        fieldValues ( volScalarFieldValue T 400 );
+    }
+
+    // Top layer (z = 0.05-0.075) - offset pattern
+    boxToCell
+    {
+        box (0.025 0.025 0.050) (0.050 0.050 0.075);
+        fieldValues ( volScalarFieldValue T 400 );
+    }
+
+    boxToCell
+    {
+        box (0.075 0.025 0.050) (0.100 0.050 0.075);
+        fieldValues ( volScalarFieldValue T 400 );
+    }
+
+    boxToCell
+    {
+        box (0.025 0.075 0.050) (0.050 0.100 0.075);
+        fieldValues ( volScalarFieldValue T 400 );
+    }
+
+    boxToCell
+    {
+        box (0.075 0.075 0.050) (0.100 0.100 0.075);
+        fieldValues ( volScalarFieldValue T 400 );
+    }
+);
+
+// ************************************************************************* //

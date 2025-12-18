@@ -1,0 +1,31 @@
+#!/bin/bash
+# Allclean - Clean all generated files
+
+echo "Cleaning all generated files..."
+
+# Remove ALL time directories including 0
+rm -rf [0-9]* [0-9]*.[0-9]*
+
+# Remove processor directories
+rm -rf processor*
+
+# Remove VTK directory
+rm -rf VTK
+
+# Remove mesh files
+rm -rf constant/polyMesh
+
+# Remove result directories
+rm -rf results_*
+
+# Remove log files
+rm -f log.* output.log
+
+# Remove temporary setFieldsDict (keep the variants)
+rm -f system/setFieldsDict
+
+echo "✓ Cleaned all generated files"
+echo "  - Removed time directories"
+echo "  - Removed VTK directory"
+echo "  - Removed mesh"
+echo "  - Removed logs"
