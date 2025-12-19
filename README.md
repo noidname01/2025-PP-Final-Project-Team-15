@@ -18,7 +18,7 @@ GPU-accelerated 3D heat diffusion solver with two implementations:
 - [Project Structure](#project-structure)
 - [Physics & Numerical Methods](#physics--numerical-methods)
 - [Performance](#performance)
-- [Visualization](#visualization)
+- [Visualization](#visualization-cpu-vs-explicit-vs-implicit-solver)
 - [Compilation Flow](#compilation-flow)
 
 ---
@@ -442,8 +442,7 @@ Solved via cuSPARSE: `Ax = b`
 
 ---
 
-## Visualization
-### CPU vs. Explicit vs. Implicit Solver
+## Visualization: CPU vs. Explicit vs. Implicit Solver
 
 | **Hot Sphere - CPU** | **Hot Sphere - CUDA Explicit** | **Hot Sphere - CUDA Implicit** |
 |---|---|---|
