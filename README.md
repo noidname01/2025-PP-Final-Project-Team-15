@@ -17,6 +17,9 @@ GPU-accelerated 3D heat diffusion solver with two implementations:
 - [Test Cases & Benchmarking](#test-cases--benchmarking)
 - [Project Structure](#project-structure)
 - [Physics & Numerical Methods](#physics--numerical-methods)
+- [Performance](#performance)
+- [Visualization](#visualization)
+- [Compilation Flow](#compilation-flow)
 
 ---
 
@@ -439,6 +442,18 @@ Solved via cuSPARSE: `Ax = b`
 
 ---
 
+## Visualization
+### CPU vs. Explicit vs. Implicit Solver
+
+| **Hot Sphere - CPU** | **Hot Sphere - CUDA Explicit** | **Hot Sphere - CUDA Implicit** |
+|---|---|---|
+| ![hotsphereCPU](./doc/hotsphereCPU.gif) | ![hotsphereCudaE](./doc/hotsphereCudaE.gif) | ![hotsphereCudaI](./doc/hotsphereCudaI.gif) |
+
+| **Checkerboard - CPU** | **Checkerboard - CUDA Explicit** | **Checkerboard - CUDA Implicit** |
+|---|---|---|
+| ![checkerboardCPU](./doc/CheckerboardCPU.gif) | ![checkerboardCudaEx](./doc/CheckerboardCudaE.gif) | ![checkboardCudaIm](./doc/CheckerboardCudaI.gif) |
+
+---
 ## Compilation Flow
 
 ### Stage 1: CUDA Libraries
